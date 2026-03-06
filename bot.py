@@ -52,6 +52,24 @@ def send_page(chat_id, page):
         reply_markup=nav_keyboard(page)
     )
 
+# ضع هنا User ID الخاص بك (يمكن الحصول منه بإرسال /start ورؤية message.from_user.id)
+ADMIN_ID = 123456789  
+
+# متغير لتخزين عدد المستخدمين
+user_count = set()
+
+@bot.message_handler(func=lambda m: True)
+def handle_page(m):
+    user_count.add(m.from_user.id)  # تسجيل كل مستخدم يستخدم البوت
+
+    text = (m.text or "").strip()
+    
+    if text.lower() == "/stats" and m.from_user.id == ADMIN_ID:
+        bot.reply_to(m, f"عدد المستخدمين الفعلي: {len(user_count)}")
+        return
+
+    # ... بقية كود معالجة الصفحة هنا
+
 @bot.callback_query_handler(func=lambda c: True)
 def callbacks(c):
     data = c.data
