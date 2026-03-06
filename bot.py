@@ -1,43 +1,35 @@
-import yt_dlp
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+import telebot
 import os
 
 TOKEN = os.environ.get("TOKEN")
 
-async def download_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = update.message.text.strip()
+bot = telebot.TeleBot(TOKEN)
 
-    if not url.startswith("http"):
-        await update.message.reply_text("أرسل رابط فيديو صالح")
+@bot.message_handler(commands=['start'])
+def start_message(message):
+    bot.send_message(
+        message.chat.id,
+        "اهلا بك في بوت القرآن الكريم.\nارسل رقم الصفحة من 1 الى 604."
+    )
+
+@bot.message_handler(func=lambda m: True)
+def send_page(message):
+    msg = message.text
+
+    if not msg.isdigit():
+        bot.reply_to(message, "ارسل رقم صفحة فقط")
         return
 
-    await update.message.reply_text("جاري التنزيل...")
+    page = int(msg)
 
-    ydl_opts = {
-        "format": "best[filesize<50M]",
-        "outtmpl": "video.%(ext)s"
-    }
+    if page < 1 or page > 604:
+        bot.reply_to(message, "الصفحات من 1 الى 604 فقط")
+        return
 
-    filename = None
+    bot.send_chat_action(message.chat.id, "upload_photo")
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
+    url = f"https://surahquran.com/img/pages-quran/page{page:03}.png"
 
-        with open(filename, "rb") as f:
-            await update.message.reply_video(f)
+    bot.send_photo(message.chat.id, url, caption=f"الصفحة رقم {page}")
 
-    except Exception as e:
-        await update.message.reply_text(f"فشل التنزيل: {e}")
-
-    finally:
-        if filename and os.path.exists(filename):
-            os.remove(filename)
-
-app = ApplicationBuilder().token(TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, download_video))
-
-print("البوت شغال")
-app.run_polling()
+bot.infinity_polling()
