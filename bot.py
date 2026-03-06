@@ -2,17 +2,18 @@ import os
 import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+# Get your bot token from environment variable
 TOKEN = os.environ.get("TOKEN")
 bot = telebot.TeleBot(TOKEN)
 
-# القارئ الافتراضي (للاستخدام مستقبلاً)
-user_reciter = {}
-
 # Admin ID
-ADMIN_ID = 123456789  # ضع هنا رقمك الخاص
+ADMIN_ID = 2092550792  # your Telegram ID
 
-# متغير لتخزين عدد المستخدمين
+# Track unique users
 user_count = set()
+
+# Optional: custom image on /start
+START_IMAGE_URL = "https://i.imgur.com/YourImage.png"  # replace with your image link
 
 def page_image(page):
     return f"https://surahquran.com/img/pages-quran/page{page:03}.png"
@@ -30,23 +31,30 @@ def nav_keyboard(page):
 @bot.message_handler(commands=['start'])
 def start(m):
     user_count.add(m.from_user.id)
-    bot.send_message(
-        m.chat.id,
-        "أهلاً بك في بوت القرآن.\nأرسل رقم الصفحة (1–604) لإرسال الصورة.\nيمكنك استخدام أزرار التنقل بعد إرسال أي صفحة."
-    )
+    # send optional start image
+    if START_IMAGE_URL:
+        bot.send_photo(
+            m.chat.id,
+            START_IMAGE_URL,
+            caption="أهلاً بك في بوت القرآن.\nأرسل رقم الصفحة (1–604) لإرسال الصورة.\nيمكنك استخدام أزرار التنقل بعد إرسال أي صفحة."
+        )
+    else:
+        bot.send_message(
+            m.chat.id,
+            "أهلاً بك في بوت القرآن.\nأرسل رقم الصفحة (1–604) لإرسال الصورة.\nيمكنك استخدام أزرار التنقل بعد إرسال أي صفحة."
+        )
 
 @bot.message_handler(func=lambda m: True)
 def handle_page(m):
-    user_count.add(m.from_user.id)  # تسجيل المستخدم
-
+    user_count.add(m.from_user.id)
     text = (m.text or "").strip()
 
-    # أمر إحصائية الأدمن
+    # Admin stats command
     if text.lower() == "/stats" and m.from_user.id == ADMIN_ID:
         bot.reply_to(m, f"عدد المستخدمين الفعلي: {len(user_count)}")
         return
 
-    # التحقق من رقم الصفحة
+    # Check if the text is a number
     if not text.isdigit():
         bot.reply_to(m, "أرسل رقم صفحة صالح (1–604).")
         return
@@ -56,7 +64,6 @@ def handle_page(m):
         bot.reply_to(m, "الصفحات من 1 إلى 604 فقط.")
         return
 
-    # إرسال الصفحة
     send_page(m.chat.id, page)
 
 def send_page(chat_id, page):
